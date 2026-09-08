@@ -11,6 +11,7 @@
 
 import { Application, send } from "jsr:@oak/oak";
 import { getClient } from "./db.ts";
+import { authRouter } from "./auth.ts";
 import { postsRouter } from "./posts.ts";
 import { searchRouter } from "./search.ts";
 
@@ -74,6 +75,8 @@ export function createApp(): Application {
     await next();
   });
 
+  app.use(authRouter.routes());
+  app.use(authRouter.allowedMethods());
   app.use(postsRouter.routes());
   app.use(postsRouter.allowedMethods());
   app.use(searchRouter.routes());
