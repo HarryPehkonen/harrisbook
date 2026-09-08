@@ -5,7 +5,7 @@
  */
 
 import { Router } from "jsr:@oak/oak";
-import { getClient } from "./db.ts";
+import { getClient, queryObject } from "./db.ts";
 import { requireActor } from "./auth.ts";
 
 export const postsRouter = new Router();
@@ -74,4 +74,21 @@ postsRouter.post("/api/posts", requireActor, async (ctx) => {
   }
 
   ctx.response.body = { success: true, data: created };
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/boards — ordered by most recent activity, never-posted boards last
+// ---------------------------------------------------------------------------
+
+postsRouter.get("/api/boards", requireActor, async (ctx) => {
+  const res = await queryObject(
+    `SELECT b.slug, b.created_at,
+            COUNT(p.id)::int AS post_count,
+            MAX(p.created_at) AS last_post_at
+       FROM boards b
+       LEFT JOIN posts p ON p.board_slug = b.slug
+      GROUP BY b.slug, b.created_at
+      ORDER BY MAX(p.created_at) DESC NULLS LAST, b.created_at DESC`,
+  );
+  ctx.response.body = { success: true, data: res.rows };
 });
