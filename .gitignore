@@ -1,0 +1,24 @@
+# Secrets
+.env
+.env.local
+
+# Databases / dumps
+*.db
+*.sql.bak
+backup.sql
+
+# Deno
+.deno/
+.deno-cache/
+coverage/
+*.lcov
+
+# Editor / OS
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
+
+# Logs
+*.log
