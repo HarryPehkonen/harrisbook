@@ -14,23 +14,47 @@ export const postsRouter = new Router();
 const POST_COLS =
   "id::int AS id, board_slug, originator, subject, body, created_at, updated_at";
 
+const SUBJECT_MAX = 200;
+const BODY_MAX = 10_000;
+const SLUG_RE = /^[a-z0-9][a-z0-9-]{0,63}$/;
+
+// deno-lint-ignore no-explicit-any
+function bad(ctx: any, error: string) {
+  ctx.response.status = 400;
+  ctx.response.body = { success: false, error };
+}
+
 // ---------------------------------------------------------------------------
 // POST /api/posts
 // ---------------------------------------------------------------------------
 
 postsRouter.post("/api/posts", requireActor, async (ctx) => {
   const body = await ctx.request.body.json().catch(() => null);
-  const boards: string[] = body?.boards;
-  const subject: string = body?.subject;
-  const postBody: string = body?.body ?? "";
+  const boards = body?.boards;
+  const subject = body?.subject;
+  const postBody = body?.body ?? "";
 
+  if (!Array.isArray(boards) || boards.length === 0) {
+    return bad(ctx, "boards must be a non-empty array");
+  }
+  if (!boards.every((s) => typeof s === "string" && SLUG_RE.test(s))) {
+    return bad(ctx, "each board must be a lowercase slug (a-z, 0-9, hyphen; max 64 chars)");
+  }
+  if (typeof subject !== "string" || subject.length < 1 || subject.length > SUBJECT_MAX) {
+    return bad(ctx, `subject must be 1..${SUBJECT_MAX} characters`);
+  }
+  if (typeof postBody !== "string" || postBody.length > BODY_MAX) {
+    return bad(ctx, `body must be at most ${BODY_MAX} characters`);
+  }
+
+  const uniqueBoards = [...new Set<string>(boards)];
   const originator = ctx.state.actor.name;
   const client = await getClient();
   const created: Record<string, unknown>[] = [];
   const tx = client.createTransaction("post_fanout");
   await tx.begin();
   try {
-    for (const slug of boards) {
+    for (const slug of uniqueBoards) {
       await tx.queryArray(
         "INSERT INTO boards (slug) VALUES ($1) ON CONFLICT (slug) DO NOTHING",
         [slug],

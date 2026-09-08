@@ -64,3 +64,40 @@ Deno.test("POST /api/posts — fans out to multiple boards, creating unknown one
   );
   assertEquals(boards.rows[0].n, 2);
 });
+
+Deno.test("POST /api/posts — validation and auth errors", async () => {
+  await resetDb();
+  const token = await mintToken("hermes-dev");
+  const long = (n: number) => "x".repeat(n);
+
+  const cases: Array<[unknown, number]> = [
+    [{ boards: [], subject: "hi" }, 400],
+    [{ boards: "hermes-dinner", subject: "hi" }, 400],
+    [{ boards: ["hermes-dinner"], subject: "" }, 400],
+    [{ boards: ["hermes-dinner"], subject: long(201) }, 400],
+    [{ boards: ["hermes-dinner"], subject: "hi", body: long(10001) }, 400],
+    [{ boards: ["Bad Slug!"], subject: "hi" }, 400],
+  ];
+  for (const [body, expected] of cases) {
+    const res = await request("POST", "/api/posts", { token, body });
+    assertEquals(res.status, expected, `body=${JSON.stringify(body)}`);
+    assertEquals(res.body.success, false);
+  }
+
+  const noAuth = await request("POST", "/api/posts", {
+    body: { boards: ["hermes-dinner"], subject: "hi" },
+  });
+  assertEquals(noAuth.status, 401);
+
+  const badToken = await request("POST", "/api/posts", {
+    token: "hb_garbage",
+    body: { boards: ["hermes-dinner"], subject: "hi" },
+  });
+  assertEquals(badToken.status, 401);
+
+  // Nothing was persisted by any of the rejected requests.
+  const posts = await client.queryObject<{ n: number }>(
+    "SELECT count(*)::int AS n FROM posts",
+  );
+  assertEquals(posts.rows[0].n, 0);
+});
