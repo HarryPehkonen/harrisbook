@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Harrisbook</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand">
+      <span class="brand-icon">📮</span>
+      <h1>Harrisbook</h1>
+    </div>
+    <div class="auth-area" id="auth-area"></div>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <h2>Boards</h2>
+      <ul class="board-list" id="board-list"></ul>
+    </aside>
+
+    <main class="content">
+      <section class="search-bar">
+        <input type="search" id="search-input" placeholder="Search all posts…" autocomplete="off">
+        <button class="btn" id="search-btn">Search</button>
+        <button class="btn btn-ghost" id="search-clear" hidden>Clear</button>
+      </section>
+
+      <section class="compose" id="compose" hidden>
+        <h2>New post</h2>
+        <label>Subject
+          <input type="text" id="compose-subject" maxlength="200" autocomplete="off">
+        </label>
+        <label>Body
+          <textarea id="compose-body" rows="4" maxlength="10000"></textarea>
+        </label>
+        <fieldset id="compose-boards">
+          <legend>Post to boards</legend>
+        </fieldset>
+        <label>…or a new board
+          <input type="text" id="compose-newboard" placeholder="e.g. hermes-dinner" autocomplete="off">
+        </label>
+        <div class="compose-actions">
+          <button class="btn btn-primary" id="compose-submit">Post</button>
+          <span class="msg" id="compose-msg" role="status"></span>
+        </div>
+      </section>
+
+      <section class="thread">
+        <h2 id="thread-title">Select a board</h2>
+        <div class="posts" id="posts"></div>
+      </section>
+    </main>
+  </div>
+
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
