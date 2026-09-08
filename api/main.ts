@@ -31,6 +31,21 @@ export function createApp(): Application {
     );
   });
 
+  // Security headers on every response. The frontend is entirely self-hosted
+  // (no CDN, no inline script), so a strict same-origin CSP holds.
+  app.use(async (ctx, next) => {
+    await next();
+    const h = ctx.response.headers;
+    h.set(
+      "Content-Security-Policy",
+      "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; object-src 'none'; form-action 'self'",
+    );
+    h.set("X-Content-Type-Options", "nosniff");
+    h.set("X-Frame-Options", "DENY");
+    h.set("Referrer-Policy", "same-origin");
+    h.set("Permissions-Policy", "geolocation=(), microphone=(), camera=()");
+  });
+
   // CORS — same-origin only (frontend is served from this same origin).
   app.use(async (ctx, next) => {
     const origin = ctx.request.headers.get("origin");

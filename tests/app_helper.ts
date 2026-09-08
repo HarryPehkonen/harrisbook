@@ -17,6 +17,7 @@ export { client, resetDb };
 export interface ApiResponse {
   status: number;
   body: any;
+  headers: Headers;
 }
 
 export async function request(
@@ -36,7 +37,7 @@ export async function request(
     new Request(`http://localhost${path}`, { method, headers, body }),
     { transport: "tcp", hostname: "127.0.0.1", port: 12345 } as any,
   );
-  if (!res) return { status: 0, body: null };
+  if (!res) return { status: 0, body: null, headers: new Headers() };
   const text = await res.text();
   let parsed: unknown = null;
   try {
@@ -44,7 +45,7 @@ export async function request(
   } catch {
     parsed = text;
   }
-  return { status: res.status, body: parsed };
+  return { status: res.status, body: parsed, headers: res.headers };
 }
 
 /** Insert an api_tokens row and return the raw bearer token. */
