@@ -23,3 +23,20 @@ Deno.test("POST /api/posts — happy path on an existing board", async () => {
   assert(typeof post.id === "number");
   assert(post.created_at);
 });
+
+Deno.test("POST /api/posts — auto-creates an unknown board slug", async () => {
+  await resetDb();
+  const token = await mintToken("hermes-dev");
+
+  const res = await request("POST", "/api/posts", {
+    token,
+    body: { boards: ["brand-new-board"], subject: "hello" },
+  });
+
+  assertEquals(res.status, 200);
+  assertEquals(res.body.data[0].board_slug, "brand-new-board");
+  const board = await client.queryObject(
+    "SELECT slug FROM boards WHERE slug = 'brand-new-board'",
+  );
+  assertEquals(board.rows.length, 1);
+});
