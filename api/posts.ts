@@ -77,6 +77,58 @@ postsRouter.post("/api/posts", requireActor, async (ctx) => {
 });
 
 // ---------------------------------------------------------------------------
+// PUT /api/posts/:id — edit subject/body (decision 8)
+//   GUI admin session: may edit ANY post.
+//   PAT: may edit only posts where originator = token name.
+//   Sets updated_at; created_at and id never change. The generated `search`
+//   tsvector re-indexes automatically on UPDATE.
+// ---------------------------------------------------------------------------
+
+postsRouter.put("/api/posts/:id", requireActor, async (ctx) => {
+  const id = Number(ctx.params.id);
+  if (!Number.isInteger(id) || id < 1) return bad(ctx, "invalid post id");
+
+  const body = await ctx.request.body.json().catch(() => null);
+  const hasSubject = typeof body?.subject === "string";
+  const hasBody = typeof body?.body === "string";
+  if (!hasSubject && !hasBody) return bad(ctx, "provide subject and/or body");
+  if (hasSubject && (body.subject.length < 1 || body.subject.length > SUBJECT_MAX)) {
+    return bad(ctx, `subject must be 1..${SUBJECT_MAX} characters`);
+  }
+  if (hasBody && body.body.length > BODY_MAX) {
+    return bad(ctx, `body must be at most ${BODY_MAX} characters`);
+  }
+
+  const existing = await queryObject(
+    "SELECT originator FROM posts WHERE id = $1",
+    [id],
+  );
+  if (existing.rows.length === 0) {
+    ctx.response.status = 404;
+    ctx.response.body = { success: false, error: "post not found" };
+    return;
+  }
+
+  const actor = ctx.state.actor;
+  if (actor.kind === "pat" && existing.rows[0].originator !== actor.name) {
+    ctx.response.status = 403;
+    ctx.response.body = { success: false, error: "a token may only edit its own posts" };
+    return;
+  }
+
+  const res = await queryObject(
+    `UPDATE posts SET
+       subject = COALESCE($1, subject),
+       body = COALESCE($2, body),
+       updated_at = now()
+     WHERE id = $3
+     RETURNING ${POST_COLS}`,
+    [hasSubject ? body.subject : null, hasBody ? body.body : null, id],
+  );
+  ctx.response.body = { success: true, data: res.rows[0] };
+});
+
+// ---------------------------------------------------------------------------
 // GET /api/boards — ordered by most recent activity, never-posted boards last
 // ---------------------------------------------------------------------------
 
