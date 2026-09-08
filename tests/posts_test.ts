@@ -40,3 +40,27 @@ Deno.test("POST /api/posts — auto-creates an unknown board slug", async () => 
   );
   assertEquals(board.rows.length, 1);
 });
+
+Deno.test("POST /api/posts — fans out to multiple boards, creating unknown ones", async () => {
+  await resetDb();
+  await client.queryArray("INSERT INTO boards (slug) VALUES ('hermes-dinner')");
+  const token = await mintToken("hermes-dev");
+
+  const res = await request("POST", "/api/posts", {
+    token,
+    body: { boards: ["hermes-dinner", "hermes-ops"], subject: "standup moved", body: "9am" },
+  });
+
+  assertEquals(res.status, 200);
+  assertEquals(res.body.data.length, 2);
+  const slugs = res.body.data.map((p: { board_slug: string }) => p.board_slug).sort();
+  assertEquals(slugs, ["hermes-dinner", "hermes-ops"]);
+  for (const p of res.body.data) {
+    assertEquals(p.subject, "standup moved");
+    assertEquals(p.body, "9am");
+  }
+  const boards = await client.queryObject<{ n: number }>(
+    "SELECT count(*)::int AS n FROM boards",
+  );
+  assertEquals(boards.rows[0].n, 2);
+});
