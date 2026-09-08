@@ -21,12 +21,19 @@ async function readSql(name: string): Promise<string> {
 }
 
 export const client = new Client(TEST_URL);
-let ready = false;
+let connected = false;
+let schemaApplied = false;
 
-/** Connect (once) and apply a clean schema. */
-export async function setupDb(): Promise<void> {
-  if (ready) return;
+async function ensureConnected(): Promise<void> {
+  if (connected) return;
   await client.connect();
+  connected = true;
+}
+
+/** Connect (once) and apply a clean schema (once per process). */
+export async function setupDb(): Promise<void> {
+  await ensureConnected();
+  if (schemaApplied) return;
   await client.queryArray(`
     DROP TABLE IF EXISTS sessions CASCADE;
     DROP TABLE IF EXISTS user_providers CASCADE;
@@ -37,7 +44,7 @@ export async function setupDb(): Promise<void> {
   `);
   await client.queryArray(await readSql("schema.sql"));
   await client.queryArray(await readSql("auth_schema.sql"));
-  ready = true;
+  schemaApplied = true;
 }
 
 /** Empty all data tables, keeping the schema. */
@@ -48,10 +55,11 @@ export async function resetDb(): Promise<void> {
   );
 }
 
-/** Close the shared client (call at the end of a test file). */
+/** Close the shared client. Safe to call repeatedly; setupDb() reconnects. */
 export async function teardownDb(): Promise<void> {
-  if (ready) {
+  if (connected) {
     await client.end();
-    ready = false;
+    connected = false;
+    schemaApplied = false;
   }
 }
