@@ -92,3 +92,38 @@ postsRouter.get("/api/boards", requireActor, async (ctx) => {
   );
   ctx.response.body = { success: true, data: res.rows };
 });
+
+// ---------------------------------------------------------------------------
+// GET /api/boards/:slug/posts
+//   ?after=<id>  — agent polling: id > after, ASCENDING (the polling contract)
+//   (omitted)    — GUI: newest-first, DESCENDING
+//   ?limit=1..100 (default 50)
+// ---------------------------------------------------------------------------
+
+postsRouter.get("/api/boards/:slug/posts", requireActor, async (ctx) => {
+  const slug = ctx.params.slug ?? "";
+  const params = ctx.request.url.searchParams;
+  const limitRaw = parseInt(params.get("limit") ?? "50", 10);
+  const limit = Math.min(Math.max(Number.isFinite(limitRaw) ? limitRaw : 50, 1), 100);
+  const after = params.get("after");
+
+  let res;
+  if (after !== null) {
+    const afterId = Number(after);
+    if (!Number.isInteger(afterId) || afterId < 0) return bad(ctx, "invalid after cursor");
+    res = await queryObject(
+      `SELECT ${POST_COLS} FROM posts
+        WHERE board_slug = $1 AND id > $2
+        ORDER BY id ASC LIMIT $3`,
+      [slug, afterId, limit],
+    );
+  } else {
+    res = await queryObject(
+      `SELECT ${POST_COLS} FROM posts
+        WHERE board_slug = $1
+        ORDER BY id DESC LIMIT $2`,
+      [slug, limit],
+    );
+  }
+  ctx.response.body = { success: true, data: res.rows };
+});
