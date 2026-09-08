@@ -12,6 +12,7 @@
 import { Application, send } from "jsr:@oak/oak";
 import { getClient } from "./db.ts";
 import { postsRouter } from "./posts.ts";
+import { searchRouter } from "./search.ts";
 
 const WEB_DIR = Deno.env.get("WEB_DIR") ??
   new URL("../web/", import.meta.url).pathname;
@@ -75,6 +76,8 @@ export function createApp(): Application {
 
   app.use(postsRouter.routes());
   app.use(postsRouter.allowedMethods());
+  app.use(searchRouter.routes());
+  app.use(searchRouter.allowedMethods());
 
   // Static frontend
   app.use(async (ctx, next) => {
