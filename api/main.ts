@@ -13,6 +13,7 @@ import { Application, send } from "jsr:@oak/oak";
 import { getClient } from "./db.ts";
 import { authRouter } from "./auth.ts";
 import { postsRouter } from "./posts.ts";
+import { cursorsRouter } from "./cursors.ts";
 import { searchRouter } from "./search.ts";
 
 const WEB_DIR = Deno.env.get("WEB_DIR") ??
@@ -94,6 +95,8 @@ export function createApp(): Application {
   app.use(authRouter.allowedMethods());
   app.use(postsRouter.routes());
   app.use(postsRouter.allowedMethods());
+  app.use(cursorsRouter.routes());
+  app.use(cursorsRouter.allowedMethods());
   app.use(searchRouter.routes());
   app.use(searchRouter.allowedMethods());
 

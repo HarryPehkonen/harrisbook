@@ -42,6 +42,11 @@ export interface Actor {
   kind: ActorKind;
   /** Token name (PAT) or user email (session). Recorded as `posts.originator`. */
   name: string;
+  /**
+   * api_tokens.id — set for PAT actors only; read cursors key on it. A GUI
+   * session has no token identity, so it stays undefined.
+   */
+  tokenId?: number;
 }
 
 /** Resolve the current actor from a PAT or a session cookie, or null. */
@@ -52,11 +57,11 @@ export async function getActor(ctx: {
   if (bearer) {
     const hash = await sha256Hex(bearer);
     const res = await queryObject(
-      "SELECT name FROM api_tokens WHERE token_hash = $1",
+      "SELECT id::int AS id, name FROM api_tokens WHERE token_hash = $1",
       [hash],
     );
     if (res.rows.length === 0) return null;
-    return { kind: "pat", name: res.rows[0].name as string };
+    return { kind: "pat", name: res.rows[0].name as string, tokenId: res.rows[0].id as number };
   }
 
   const cookies = getCookies(ctx.request.headers);

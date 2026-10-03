@@ -36,7 +36,7 @@ searchRouter.get("/api/search", requireActor, async (ctx) => {
   values.push(LIMIT);
 
   const res = await queryObject(
-    `SELECT id::int AS id, board_slug, originator, subject, body, created_at, updated_at
+    `SELECT id::int AS id, board_slug, originator, subject, body, mentions, created_at, updated_at
        FROM posts
       WHERE search @@ plainto_tsquery('english', $1)
         ${boardClause}

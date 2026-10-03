@@ -35,6 +35,7 @@ export async function setupDb(): Promise<void> {
   await ensureConnected();
   if (schemaApplied) return;
   await client.queryArray(`
+    DROP TABLE IF EXISTS read_cursors CASCADE;
     DROP TABLE IF EXISTS sessions CASCADE;
     DROP TABLE IF EXISTS user_providers CASCADE;
     DROP TABLE IF EXISTS users CASCADE;
@@ -51,7 +52,7 @@ export async function setupDb(): Promise<void> {
 export async function resetDb(): Promise<void> {
   await setupDb();
   await client.queryArray(
-    `TRUNCATE posts, boards, api_tokens, sessions, user_providers, users RESTART IDENTITY CASCADE`,
+    `TRUNCATE posts, boards, api_tokens, sessions, user_providers, users, read_cursors RESTART IDENTITY CASCADE`,
   );
 }
 
